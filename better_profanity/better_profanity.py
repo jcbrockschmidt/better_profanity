@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Iterable
+import math
 
 from .constants import ALLOWED_CHARACTERS
 from .utils import (
@@ -9,7 +10,10 @@ from .utils import (
     get_replacement_for_swear_word,
     read_wordlist,
 )
-from .varying_string import VaryingString
+from .sliced_word_set import SlicedWordSet
+
+
+MAX_SLICE_VARIANTS = 1_000_000
 
 
 class Profanity:
@@ -23,11 +27,7 @@ class Profanity:
             TypeError: If `words` is not a valid type.
             FileNotFoundError: If `words` is a `str` and is not a valid file path.
         """
-        if (
-            words is not None
-            and not isinstance(words, str)
-            and not isinstance(words, Iterable)
-        ):
+        if (words is not None) and (not isinstance(words, (str, Iterable))):
             raise TypeError("words must be of type str, list, or None")
         self.CENSOR_WORDSET = []
         self.CHARS_MAPPING = {
@@ -43,10 +43,13 @@ class Profanity:
         }
         self.MAX_NUMBER_COMBINATIONS = 1
         self.ALLOWED_CHARACTERS = ALLOWED_CHARACTERS
+
+        max_char_variants = max([len(chars) for chars in self.CHARS_MAPPING.values()])
+        self._max_slice_len = int(math.log(MAX_SLICE_VARIANTS, max_char_variants))
         self._default_wordlist_filename = get_complete_path_of_file(
             "profanity_wordlist.txt"
         )
-        if type(words) == str:
+        if isinstance(words, str):
             self.load_censor_words_from_file(words)
         else:
             self.load_censor_words(custom_words=words)
@@ -81,10 +84,13 @@ class Profanity:
                 "Function 'add_censor_words' only accepts list, tuple or set."
             )
         for w in custom_words:
-            self.CENSOR_WORDSET.append(VaryingString(w, char_map=self.CHARS_MAPPING))
+            num_of_non_allowed_chars = self._count_non_allowed_characters(w)
+            if num_of_non_allowed_chars > self.MAX_NUMBER_COMBINATIONS:
+                self.MAX_NUMBER_COMBINATIONS = num_of_non_allowed_chars
+            self.CENSOR_WORDSET.add_word(w)
 
     def contains_profanity(self, text):
-        """Return True if  the input text has any swear words."""
+        """Return True if the input text has any swear words."""
         return text != self.censor(text)
 
     ## PRIVATE ##
@@ -109,9 +115,8 @@ class Profanity:
 
         # Populate the words into an internal wordset
         whitelist_words = set(whitelist_words)
-        all_censor_words = []
+        censor_words = SlicedWordSet(self.CHARS_MAPPING, self._max_slice_len)
         for word in set(words):
-            # All words in CENSOR_WORDSET must be in lowercase
             word = word.lower()
 
             if word in whitelist_words:
@@ -121,10 +126,9 @@ class Profanity:
             if num_of_non_allowed_chars > self.MAX_NUMBER_COMBINATIONS:
                 self.MAX_NUMBER_COMBINATIONS = num_of_non_allowed_chars
 
-            all_censor_words.append(VaryingString(word, char_map=self.CHARS_MAPPING))
+            censor_words.add_word(word)
 
-        # The default wordlist takes ~5MB+ of memory
-        self.CENSOR_WORDSET = all_censor_words
+        self.CENSOR_WORDSET = censor_words
 
     def _count_non_allowed_characters(self, word):
         count = 0

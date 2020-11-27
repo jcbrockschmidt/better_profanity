@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from itertools import product
 import os.path
 
 
@@ -45,3 +46,18 @@ def any_next_words_form_swear_word(cur_word, words_indices, censor_words):
         if full_word in censor_words or full_word_with_separators in censor_words:
             return True, end_index
     return False, -1
+
+
+def gen_word_variants(char_map, word):
+    """
+    Generates variants for a word.
+
+    Args:
+        char_map (dict): Dictionary mapping characters to their possible characters substitutions.
+        word (str): Word to generate variants for.
+
+    Returns:
+        list: Variants of `word` for all possible character substitutions.
+    """
+    combos = [char_map.get(c, (c,)) for c in word]
+    return ["".join(pattern) for pattern in product(*combos)]
