@@ -15,7 +15,7 @@ ALTERNATE_CHARS = {
     "l": ("1", "l"),
     "e": ("*", "3"),
     "s": ("$", "5"),
-    "t": ("7",),
+    "t": ("+", "7",),
 }
 
 ALLOWED_CHARACTERS = set(ascii_letters)
