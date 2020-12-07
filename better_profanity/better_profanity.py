@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 
-from .constants import ALLOWED_CHARACTERS
+from .constants import ALLOWED_CHARACTERS, ALTERNATE_CHARS
 from .utils import (
     any_next_words_form_swear_word,
     get_complete_path_of_file,
@@ -30,17 +30,12 @@ class Profanity:
         ):
             raise TypeError("words must be of type str, list, or None")
         self.CENSOR_WORDSET = []
-        self.CHARS_MAPPING = {
-            "a": ("a", "@", "*", "4"),
-            "i": ("i", "*", "l", "1"),
-            "o": ("o", "*", "0", "@"),
-            "u": ("u", "*", "v"),
-            "v": ("v", "*", "u"),
-            "l": ("l", "1"),
-            "e": ("e", "*", "3"),
-            "s": ("s", "$", "5"),
-            "t": ("t", "7"),
-        }
+        self.CHARS_MAPPING = {}
+        for ch, alters in ALTERNATE_CHARS.items():
+            mapping = list(alters)
+            mapping.append(ch)
+            self.CHARS_MAPPING[ch] = mapping
+
         self.MAX_NUMBER_COMBINATIONS = 1
         self.ALLOWED_CHARACTERS = ALLOWED_CHARACTERS
         self._default_wordlist_filename = get_complete_path_of_file(
